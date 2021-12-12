@@ -20,6 +20,7 @@ import {
   shutdown
 } from 'snarkyjs';
 
+// TODO: connect the snapp to the frontend
 export { deploy, submitBidTx, stopAuctionTx }
 
 await isReady;
@@ -33,7 +34,7 @@ class BlindAuction extends SmartContract {
   bids: Field[];
   maxNumberOfBids: number;
 
-  // initialization
+  // Initialization
   constructor(
     initialBalance: UInt64,
     address: PublicKey,
@@ -44,21 +45,20 @@ class BlindAuction extends SmartContract {
     this.highestBid = State.init(Field.zero)
     this.highestBidder = State.init(address)
 
-    // set the public key of the bidders
+    // Set the public key of the bidders
     this.bidders = [];
     this.bids = [];
-    // in a real world app, the number of max allowed accounts will be much larger
-    this.maxNumberOfBids = 10; // length of local test accounts 
+    // In a real world app, the number of max allowed accounts will be much larger
+    this.maxNumberOfBids = 10; // arbirtrary but this is the length of Local.testAccounts array
   }
-  @method async submitBid(pubkey: PublicKey, signature: Signature, bid: Field) {
 
-    // checks if bids can still be sent
+  @method async submitBid(pubkey: PublicKey, signature: Signature, bid: Field) {
+    // Checks if bids can still be sent
     const auctionDone = await this.auctionDone.get();
     auctionDone.assertEquals(false)
 
-    // ensures that the bidder owns the associated private key
+    // Ensures that the bidder owns the associated private key
     signature.verify(pubkey, [bid]).assertEquals(true)
-
     this.bidders.push(pubkey);
     this.bids.push(bid);
 
@@ -68,10 +68,11 @@ class BlindAuction extends SmartContract {
     if (this.bidders.length == this.maxNumberOfBids)
       this.stopAuction()
 
-    // debug 
+    // Debug 
     console.log("bid: ", bid.toString())
     console.log("bidder's pubkey: ", pubkey.toJSON())
   }
+  // Manually stop the auction and updates the final state; in production context, we can get a end timestamp from Mina to stop the auction
   @method stopAuction() {
     const bidsToNumber = this.bids.map((i) => parseInt(i.toString()))
     const indexOfHighestBid = getIndexOfMaxValue(bidsToNumber)
@@ -79,14 +80,13 @@ class BlindAuction extends SmartContract {
     const highestBid = this.bids[indexOfHighestBid];
     const highestBidder = this.bidders[indexOfHighestBid]
 
+    this.auctionDone.set(new Bool(true))
     this.highestBid.set(highestBid)
     this.highestBidder.set(highestBidder)
-    this.auctionDone.set(new Bool(true))
   }
 }
 
-
-// setup local Mina instance
+// Setup local Mina instance
 const Local = Mina.LocalBlockchain();
 Mina.setActiveInstance(Local);
 let snappInstance: BlindAuction;
@@ -120,7 +120,7 @@ async function deploy() {
     .send()
     .wait();
 
-  // print snapp's initial state
+  // Print snapp's initial state
   let b = await Mina.getAccount(snappPubkey);
   for (const i in [0, 1, 2, 3, 4, 5, 6, 7]) {
     console.log('state', i, ':', b.snapp.appState[i].toString());
@@ -141,7 +141,6 @@ async function deploy() {
   // stop auction
   console.log('\n\n====== STOP AUCTION ======\n\n');
   await stopAuctionTx(player3)
-
 
   isDeploying = false
 }
