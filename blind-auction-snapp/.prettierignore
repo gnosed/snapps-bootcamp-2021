@@ -1,0 +1,14 @@
+# NodeJS
+node_modules
+dist
+public/src
+.husky
+
+# Editor
+.vscode
+
+# System
+.DS_Store
+
+# Misc
+LICENSE
