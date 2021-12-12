@@ -6,7 +6,7 @@ First-price sealed-bid auction (aka blind auction) with SnarkyJS.
 ```sh
 npm i
 npx tsc
-node dist/node dist/blind-auction-snapp.js
+node dist/blind-auction-snapp.js
 ```
 
 ## Improvements
