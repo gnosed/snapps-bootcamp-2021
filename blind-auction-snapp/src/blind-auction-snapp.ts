@@ -20,7 +20,7 @@ import {
   shutdown
 } from 'snarkyjs';
 
-export { deploy, submitBidTx }
+export { deploy, submitBidTx, stopAuctionTx }
 
 await isReady;
 
@@ -43,13 +43,15 @@ class BlindAuction extends SmartContract {
     this.auctionDone = State.init(new Bool(false))
     this.highestBid = State.init(Field.zero)
     this.highestBidder = State.init(address)
+
     // set the public key of the bidders
     this.bidders = [];
     this.bids = [];
+    // in a real world app, the number of max allowed accounts will be much larger
     this.maxNumberOfBids = 10; // length of local test accounts 
   }
   @method async submitBid(pubkey: PublicKey, signature: Signature, bid: Field) {
-    // ehecks if bids can still be sent
+    // checks if bids can still be sent
     const auctionDone = await this.auctionDone.get();
     auctionDone.assertEquals(false)
 
@@ -59,8 +61,8 @@ class BlindAuction extends SmartContract {
     this.bidders.push(pubkey);
     this.bids.push(bid);
 
+    // checks if bidder's pubkey has already bidded, doesn't matter since this smart contract is not sybil attack resistent
     // const bidderToString = this.bidders.map((i) => i.toString())
-
     // new Bool(bidderToString.includes(pubkey.toString())).assertEquals(false)
 
     // debug 
@@ -87,13 +89,6 @@ class BlindAuction extends SmartContract {
   @method stopAuction() {
     this.auctionDone.set(new Bool(true))
   }
-}
-
-function getIndexOfMaxValue(array: number[]): number {
-  const max = Math.max(...array);
-  const index = array.indexOf(max);
-
-  return index
 }
 
 
@@ -138,56 +133,30 @@ async function deploy() {
     console.log('state', i, ':', b.snapp.appState[i].toString());
   }
 
-  // play
   console.log('\n\n====== FIRST BID ======\n\n');
-  await Mina.transaction(player1, async () => {
-    const bid = new Field(10);
-    const signature = Signature.create(player1, [bid]);
-    await snappInstance.submitBid(
-      player1.toPublicKey(),
-      signature,
-      bid,
-    );
-  })
-    .send()
-    .wait();
+  // Bid
   await submitBidTx(player1, new Field(33))
-
   // debug
   b = await Mina.getAccount(snappPubkey);
   for (const i in [0, 1, 2, 3, 4, 5, 6, 7]) {
     console.log('state', i, ':', b.snapp.appState[i].toString());
   }
 
-  // play
   console.log('\n\n====== SECOND BID ======\n\n');
-  await Mina.transaction(player2, async () => {
-    const bid = new Field(2);
-    const signature = Signature.create(player2, [bid]);
-    await snappInstance
-      .submitBid(player2.toPublicKey(), signature, bid)
-      .catch((e) => console.log(e));
-  })
-    .send()
-    .wait();
-
+  // Bid
+  await submitBidTx(player2, new Field(11))
+  // debug
   b = await Mina.getAccount(snappPubkey);
 
-  // play
   console.log('\n\n====== THIRD BID ======\n\n');
-  await Mina.transaction(player3, async () => {
-    const bid = new Field(22);
-    const signature = Signature.create(player3, [bid]);
-    await snappInstance
-      .submitBid(player3.toPublicKey(), signature, bid)
-      .catch((e) => console.log(e));
-  })
-    .send()
-    .wait();
-
+  // Bid
+  await submitBidTx(player3, new Field(22))
+  // debug
   b = await Mina.getAccount(snappPubkey);
 
-  console.log('did someone win?', b.snapp.appState[2].toString());
+  await stopAuctionTx(player3)
+
+  console.log('The winner of the auction is: ', b.snapp.appState[2].toString());
   for (const i in [0, 1, 2, 3, 4, 5, 6, 7]) {
     console.log('state', i, ':', b.snapp.appState[i].toString());
   }
@@ -213,12 +182,35 @@ async function submitBidTx(privkey: PrivateKey, bid: Field) {
   }
 }
 
-deploy();
-if (!isDeploying) {
-  await submitBidTx(player1, new Field(33))
-  await submitBidTx(player2, new Field(44))
-  await submitBidTx(player3, new Field(55))
+async function stopAuctionTx(privkey: PrivateKey) {
+  let tx =
+    await Mina.transaction(privkey, async () => {
+      await snappInstance.stopAuction();
+    });
+  try {
+    await tx
+      .send()
+      .wait();
+  } catch {
+    console.log(`Stop auction failed.`)
+  }
 }
 
-// Cleanup
+// helpers
+function getIndexOfMaxValue(array: number[]): number {
+  const max = Math.max(...array);
+  const index = array.indexOf(max);
+
+  return index
+}
+
+// exec code
+deploy();
+// if (!isDeploying) {
+//   await submitBidTx(player1, new Field(33))
+//   await submitBidTx(player2, new Field(44))
+//   await submitBidTx(player3, new Field(55))
+// }
+
+// cleanup
 shutdown();
