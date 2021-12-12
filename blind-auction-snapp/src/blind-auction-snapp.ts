@@ -51,6 +51,7 @@ class BlindAuction extends SmartContract {
     this.maxNumberOfBids = 10; // length of local test accounts 
   }
   @method async submitBid(pubkey: PublicKey, signature: Signature, bid: Field) {
+
     // checks if bids can still be sent
     const auctionDone = await this.auctionDone.get();
     auctionDone.assertEquals(false)
@@ -61,24 +62,15 @@ class BlindAuction extends SmartContract {
     this.bidders.push(pubkey);
     this.bids.push(bid);
 
-    // checks if bidder's pubkey has already bidded, doesn't matter since this smart contract is not sybil attack resistent
-    // const bidderToString = this.bidders.map((i) => i.toString())
-    // new Bool(bidderToString.includes(pubkey.toString())).assertEquals(false)
-
-    // debug 
-    // console.log("submitBid()")
-    // console.log("auctionDone: ", auctionDone)
-    console.log("bid: ", bid.toString())
-    console.log("bidder's pubkey: ", pubkey.toJSON())
-    // console.log("bidders: ", JSON.stringify(this.bidders))
-    // console.log("bids: ", JSON.stringify(this.bids))
-
     const updatedAuctionDone = Circuit.if(new Bool(this.bidders.length == this.maxNumberOfBids), new Bool(true), new Bool(false))
     this.auctionDone.set(updatedAuctionDone)
 
     if (this.bidders.length == this.maxNumberOfBids)
       this.stopAuction()
 
+    // debug 
+    console.log("bid: ", bid.toString())
+    console.log("bidder's pubkey: ", pubkey.toJSON())
   }
   @method stopAuction() {
     const bidsToNumber = this.bids.map((i) => parseInt(i.toString()))
@@ -150,15 +142,6 @@ async function deploy() {
   console.log('\n\n====== STOP AUCTION ======\n\n');
   await stopAuctionTx(player3)
 
-  console.log('\n\n====== FINAL SNAPP STATE ======\n\n');
-  b = await Mina.getAccount(snappPubkey);
-  for (const i in [0, 1, 2, 3, 4, 5, 6, 7]) {
-    console.log('state', i, ':', b.snapp.appState[i].toString());
-  }
-
-  console.log('\n\n====== AUCTION RESULTS ======\n\n');
-  console.log('Winner\' pubkey: ', b.snapp.appState[2].toString())
-  console.log('Paid price (highest bid): ', b.snapp.appState[1].toString())
 
   isDeploying = false
 }
@@ -195,6 +178,16 @@ async function stopAuctionTx(privkey: PrivateKey) {
   } catch {
     console.log(`Stop auction failed.`)
   }
+
+  console.log('\n\n====== FINAL SNAPP STATE ======\n\n');
+  let b = await Mina.getAccount(snappPubkey);
+  for (const i in [0, 1, 2, 3, 4, 5, 6, 7]) {
+    console.log('state', i, ':', b.snapp.appState[i].toString());
+  }
+
+  console.log('\n\n====== AUCTION RESULTS ======\n\n');
+  console.log('Winner\' pubkey: ', b.snapp.appState[2].toString())
+  console.log('Paid price (highest bid): ', b.snapp.appState[1].toString())
 }
 
 // helpers
