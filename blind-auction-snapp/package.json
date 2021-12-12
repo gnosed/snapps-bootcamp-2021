@@ -1,5 +1,5 @@
 {
-  "name": "snarkyjs-sudoku",
+  "name": "snarkyjs-blind-auction",
   "version": "0.1.0",
   "description": "",
   "type": "module",
@@ -9,7 +9,7 @@
     "build": "esbuild --minify --splitting --bundle ./src/App.jsx --outdir=./public/js --format=esm --target=esnext --define:process.env.NODE_ENV='\"production\"'"
   },
   "keywords": [],
-  "author": "O(1) labs",
+  "author": "Alex Roque",
   "license": "Apache-2.0",
   "dependencies": {
     "esbuild": "^0.14.2",
