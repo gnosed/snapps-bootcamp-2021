@@ -136,15 +136,15 @@ async function deploy() {
 
   // bid
   console.log('\n\n====== FIRST BID ======\n\n');
-  await submitBidTx(player1, new Field(33))
+  await submitBidTx(player1, 100)
 
   // bid
   console.log('\n\n====== SECOND BID ======\n\n');
-  await submitBidTx(player2, new Field(11))
+  await submitBidTx(player2, 99)
 
   // bid
   console.log('\n\n====== THIRD BID ======\n\n');
-  await submitBidTx(player3, new Field(22))
+  await submitBidTx(player3, 22)
 
   // stop auction
   console.log('\n\n====== STOP AUCTION ======\n\n');
@@ -163,14 +163,14 @@ async function deploy() {
   isDeploying = false
 }
 
-async function submitBidTx(privkey: PrivateKey, bid: Field) {
+async function submitBidTx(privkey: PrivateKey, bid: number) {
   let tx =
     await Mina.transaction(privkey, async () => {
-      const signature = Signature.create(privkey, [bid]);
+      const signature = Signature.create(privkey, [new Field(bid)]);
       await snappInstance.submitBid(
         privkey.toPublicKey(),
         signature,
-        bid,
+        new Field(bid),
       );
     });
   try {
@@ -207,11 +207,6 @@ function getIndexOfMaxValue(array: number[]): number {
 
 // exec code
 deploy();
-// if (!isDeploying) {
-//   await submitBidTx(player1, new Field(33))
-//   await submitBidTx(player2, new Field(44))
-//   await submitBidTx(player3, new Field(55))
-// }
 
 // cleanup
 shutdown();
