@@ -66,27 +66,29 @@ class BlindAuction extends SmartContract {
     // new Bool(bidderToString.includes(pubkey.toString())).assertEquals(false)
 
     // debug 
-    console.log("submitBid()")
-    console.log("auctionDone: ", auctionDone)
-    console.log("bid: ", parseInt(bid.toString()))
-    console.log("bidders: ", JSON.stringify(this.bidders))
-    console.log("bids: ", JSON.stringify(this.bids))
+    // console.log("submitBid()")
+    // console.log("auctionDone: ", auctionDone)
+    console.log("bid: ", bid.toString())
+    console.log("bidder's pubkey: ", pubkey.toJSON())
+    // console.log("bidders: ", JSON.stringify(this.bidders))
+    // console.log("bids: ", JSON.stringify(this.bids))
 
     const updatedAuctionDone = Circuit.if(new Bool(this.bidders.length == this.maxNumberOfBids), new Bool(true), new Bool(false))
     this.auctionDone.set(updatedAuctionDone)
 
-    if (this.bidders.length == this.maxNumberOfBids) {
-      const bidsToNumber = this.bids.map((i) => parseInt(i.toString()))
-      const indexOfHighestBid = getIndexOfMaxValue(bidsToNumber)
+    if (this.bidders.length == this.maxNumberOfBids)
+      this.stopAuction()
 
-      const highestBid = this.bids[indexOfHighestBid];
-      const highestBidder = this.bidders[indexOfHighestBid]
-
-      this.highestBid.set(highestBid)
-      this.highestBidder.set(highestBidder)
-    }
   }
   @method stopAuction() {
+    const bidsToNumber = this.bids.map((i) => parseInt(i.toString()))
+    const indexOfHighestBid = getIndexOfMaxValue(bidsToNumber)
+
+    const highestBid = this.bids[indexOfHighestBid];
+    const highestBidder = this.bidders[indexOfHighestBid]
+
+    this.highestBid.set(highestBid)
+    this.highestBidder.set(highestBidder)
     this.auctionDone.set(new Bool(true))
   }
 }
@@ -126,40 +128,38 @@ async function deploy() {
     .send()
     .wait();
 
-  // initial state
+  // print snapp's initial state
   let b = await Mina.getAccount(snappPubkey);
-  console.log('initial state of the snapp');
   for (const i in [0, 1, 2, 3, 4, 5, 6, 7]) {
     console.log('state', i, ':', b.snapp.appState[i].toString());
   }
 
+  // bid
   console.log('\n\n====== FIRST BID ======\n\n');
-  // Bid
   await submitBidTx(player1, new Field(33))
-  // debug
-  b = await Mina.getAccount(snappPubkey);
-  for (const i in [0, 1, 2, 3, 4, 5, 6, 7]) {
-    console.log('state', i, ':', b.snapp.appState[i].toString());
-  }
 
+  // bid
   console.log('\n\n====== SECOND BID ======\n\n');
-  // Bid
   await submitBidTx(player2, new Field(11))
-  // debug
-  b = await Mina.getAccount(snappPubkey);
 
+  // bid
   console.log('\n\n====== THIRD BID ======\n\n');
-  // Bid
   await submitBidTx(player3, new Field(22))
-  // debug
-  b = await Mina.getAccount(snappPubkey);
 
+  // stop auction
+  console.log('\n\n====== STOP AUCTION ======\n\n');
   await stopAuctionTx(player3)
 
-  console.log('The winner of the auction is: ', b.snapp.appState[2].toString());
+  console.log('\n\n====== FINAL SNAPP STATE ======\n\n');
+  b = await Mina.getAccount(snappPubkey);
   for (const i in [0, 1, 2, 3, 4, 5, 6, 7]) {
     console.log('state', i, ':', b.snapp.appState[i].toString());
   }
+
+  console.log('\n\n====== AUCTION RESULTS ======\n\n');
+  console.log('Winner\' pubkey: ', b.snapp.appState[2].toString())
+  console.log('Paid price (highest bid): ', b.snapp.appState[1].toString())
+
   isDeploying = false
 }
 
@@ -183,6 +183,7 @@ async function submitBidTx(privkey: PrivateKey, bid: Field) {
 }
 
 async function stopAuctionTx(privkey: PrivateKey) {
+  console.log('Exec stopAuctionTx()')
   let tx =
     await Mina.transaction(privkey, async () => {
       await snappInstance.stopAuction();
